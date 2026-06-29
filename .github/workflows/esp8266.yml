@@ -1,4 +1,4 @@
-herename: Build ESP8266
+name: Build ESP8266
 
 on:
   push:
