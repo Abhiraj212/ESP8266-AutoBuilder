@@ -1,22 +1,24 @@
-name: Build ESP8266
+herename: Build ESP8266
 
 on:
-  workflow_dispatch:
   push:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: arduino/setup-arduino-cli@v2
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
 
       - name: Configure Arduino CLI
         run: |
           mkdir -p ~/.arduino15
-          cat <<EOF > ~/.arduino15/arduino-cli.yaml
+          cat > ~/.arduino15/arduino-cli.yaml <<EOF
           board_manager:
             additional_urls:
               - https://arduino.esp8266.com/stable/package_esp8266com_index.json
@@ -32,16 +34,24 @@ jobs:
         run: |
           arduino-cli lib install "SinricPro"
 
-      - name: Compile Sketch
+      - name: Prepare Sketch
         run: |
           mkdir Sketch
           cp SmartHome.ino Sketch/Sketch.ino
+
+      - name: Compile
+        run: |
           arduino-cli compile \
             --fqbn esp8266:esp8266:nodemcuv2 \
+            --output-dir build \
             Sketch
 
-      - name: Upload BIN
+      - name: Show Build Files
+        run: |
+          find . -name "*.bin"
+
+      - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: Sketch/build/**
+          path: build/*.bin
