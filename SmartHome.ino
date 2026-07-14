@@ -29,7 +29,7 @@
 #define IR_PIN D2
 
 // Replace after first upload with your remote HEX code
-uint32_t IR_BUTTON_CODE = 0xFF52AD; // Assumed '9' code (not guaranteed)
+uint32_t IR_BUTTON_CODE = 0xFFFFFFFF;
 
 bool relayState = false;
 
