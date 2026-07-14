@@ -33,6 +33,7 @@ jobs:
       - name: Install Libraries
         run: |
           arduino-cli lib install "SinricPro"
+          arduino-cli lib install "IRremote"
 
       - name: Prepare Sketch
         run: |
