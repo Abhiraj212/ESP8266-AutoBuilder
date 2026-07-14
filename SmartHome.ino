@@ -1,17 +1,10 @@
 
-/***************************************************
-  Abhiraj Smart Home
-  ESP8266 + SinricPro + IR Remote
-
-  Relay : D1 (GPIO5)
-  IR Receiver : D2
-
-  NOTE:
-  1. Upload once.
-  2. Open Serial Monitor @115200.
-  3. Press your remote button.
-  4. Replace IR_BUTTON_CODE with the printed HEX value.
-***************************************************/
+/****************************************************
+ Abhiraj Smart Home V2
+ ESP8266 + SinricPro + IR Remote
+ Relay: D1 (Active LOW)
+ IR RX: D2
+****************************************************/
 
 #include <ESP8266WiFi.h>
 #include <SinricPro.h>
@@ -28,51 +21,47 @@
 #define RELAY_PIN D1
 #define IR_PIN D2
 
-// Replace after first upload with your remote HEX code
-uint32_t IR_BUTTON_CODE = 0xFFFFFFFF;
+bool relayState=false;
+unsigned long lastIR=0;
 
-bool relayState = false;
-
-void setRelay(bool state){
-  relayState = state;
-  digitalWrite(RELAY_PIN, state ? LOW : HIGH); // Active LOW relay
+void setRelay(bool s){
+  relayState=s;
+  digitalWrite(RELAY_PIN, relayState ? LOW : HIGH);
+  Serial.print("Relay: ");
+  Serial.println(relayState?"ON":"OFF");
 }
 
-bool onPowerState(const String &deviceId, bool &state){
+bool onPowerState(const String&, bool &state){
   setRelay(state);
-  Serial.println(state ? "Light ON" : "Light OFF");
   return true;
 }
 
 void setupWiFi(){
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  Serial.print("Connecting");
+  Serial.print("Connecting WiFi");
+  WiFi.begin(WIFI_SSID,WIFI_PASS);
   while(WiFi.status()!=WL_CONNECTED){
     delay(500);
     Serial.print(".");
   }
-  Serial.println();
+  Serial.println("\nWiFi Connected");
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 }
 
-void setupSinric(){
-  SinricProSwitch &sw = SinricPro[DEVICE_ID];
-  sw.onPowerState(onPowerState);
-  SinricPro.begin(APP_KEY, APP_SECRET);
-  SinricPro.restoreDeviceStates(true);
-}
-
 void setup(){
   Serial.begin(115200);
-
-  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(RELAY_PIN,OUTPUT);
   setRelay(false);
 
   IrReceiver.begin(IR_PIN, ENABLE_LED_FEEDBACK);
+  Serial.println("IR Receiver Ready");
 
   setupWiFi();
-  setupSinric();
+
+  SinricProSwitch &sw=SinricPro[DEVICE_ID];
+  sw.onPowerState(onPowerState);
+  SinricPro.begin(APP_KEY,APP_SECRET);
+  SinricPro.restoreDeviceStates(true);
 
   Serial.println("Smart Home Ready");
 }
@@ -80,7 +69,7 @@ void setup(){
 void loop(){
 
   if(WiFi.status()!=WL_CONNECTED){
-    WiFi.disconnect();
+    Serial.println("WiFi Reconnecting...");
     setupWiFi();
   }
 
@@ -88,19 +77,19 @@ void loop(){
 
   if(IrReceiver.decode()){
 
-    uint32_t code = IrReceiver.decodedIRData.decodedRawData;
+    uint32_t code=IrReceiver.decodedIRData.decodedRawData;
 
-    Serial.print("IR HEX: 0x");
-    Serial.println(code, HEX);
+    if(code!=0 && millis()-lastIR>250){
 
-    if(code == IR_BUTTON_CODE){
+      lastIR=millis();
+
+      Serial.print("IR HEX: 0x");
+      Serial.println(code,HEX);
 
       setRelay(!relayState);
 
-      SinricProSwitch &sw = SinricPro[DEVICE_ID];
+      SinricProSwitch &sw=SinricPro[DEVICE_ID];
       sw.sendPowerStateEvent(relayState);
-
-      Serial.println(relayState ? "Relay ON" : "Relay OFF");
     }
 
     IrReceiver.resume();
